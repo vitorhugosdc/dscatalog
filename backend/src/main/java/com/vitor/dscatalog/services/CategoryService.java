@@ -27,4 +27,16 @@ public class CategoryService {
         Category result = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Resource not found"));
         return new CategoryDTO(result);
     }
+
+    @Transactional
+    public CategoryDTO insert(CategoryDTO dto) {
+        Category category = new Category();
+        copyDto(dto, category);
+        category = repository.save(category);
+        return new CategoryDTO(category);
+    }
+
+    private void copyDto(CategoryDTO dto, Category entity) {
+        entity.setName(dto.getName());
+    }
 }
