@@ -4,6 +4,7 @@ import com.vitor.dscatalog.dto.CategoryDTO;
 import com.vitor.dscatalog.entities.Category;
 import com.vitor.dscatalog.repositories.CategoryRepository;
 import com.vitor.dscatalog.services.exceptions.ResourceNotFoundException;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +35,18 @@ public class CategoryService {
         copyDto(dto, category);
         category = repository.save(category);
         return new CategoryDTO(category);
+    }
+
+    @Transactional
+    public CategoryDTO update(Long id, CategoryDTO dto) {
+        try {
+            Category category = repository.getReferenceById(id);
+            copyDto(dto, category);
+            category = repository.save(category);
+            return new CategoryDTO(category);
+        } catch (EntityNotFoundException e) {
+            throw new ResourceNotFoundException("Resource not found");
+        }
     }
 
     private void copyDto(CategoryDTO dto, Category entity) {
