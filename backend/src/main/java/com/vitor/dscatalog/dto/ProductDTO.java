@@ -3,6 +3,7 @@ package com.vitor.dscatalog.dto;
 import com.vitor.dscatalog.entities.Category;
 import com.vitor.dscatalog.entities.Product;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,6 +14,7 @@ public class ProductDTO {
     private String description;
     private Double price;
     private String imgUrl;
+    private LocalDate date;
 
     private List<CategoryDTO> categories = new ArrayList<>();
 
@@ -53,6 +55,10 @@ public class ProductDTO {
 
     public String getImgUrl() {
         return imgUrl;
+    }
+
+    public LocalDate getDate() {
+        return date;
     }
 
     public List<CategoryDTO> getCategories() {

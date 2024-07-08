@@ -86,6 +86,14 @@ public class Product {
         this.imgUrl = imgUrl;
     }
 
+    public void setDate(LocalDate date) {
+        this.date = date;
+    }
+
+    public LocalDate getDate() {
+        return date;
+    }
+
     public Set<Category> getCategories() {
         return categories;
     }

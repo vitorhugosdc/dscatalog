@@ -19,7 +19,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     /*DISTINCT pois tem 1 produto com 2 categorias, ai ao invés de dar 25 produtos inseridos, dá 26, pois contou o mesmo produto 2 vezes devido a ter 2 categorias
     * Se tivesse mais produtos com mais de 1 categoria daria uma diferença bem maior
     * Então estamos fazendo a contagem distinta do total de produtos, o que com essa seed, é 25*/
-    countQuery = "SELECT COUNT(DISTINCT tb_product.id) from tb_product " +
+    countQuery = "SELECT COUNT(DISTINCT tb_product.id) FROM tb_product " +
             "INNER JOIN tb_product_category " +
             "ON tb_product.id = tb_product_category.product_id " +
             "INNER JOIN tb_category " +
