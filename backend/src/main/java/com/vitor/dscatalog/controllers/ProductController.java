@@ -19,7 +19,31 @@ public class ProductController {
 
     @GetMapping
     public ResponseEntity<Page<ProductDTO>> findAll(Pageable pageable) {
+        //long startTime = System.nanoTime();
         Page<ProductDTO> result = service.findAll(pageable);
+        //long endTime = System.nanoTime();
+        //long duration = (endTime - startTime) / 1_000_000;
+        //System.out.println("findAll duration: " + duration + " ms");
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping(value = "/findAll")
+    public ResponseEntity<Page<ProductDTO>> findAllWithCategories(Pageable pageable){
+        //long startTime = System.nanoTime();
+        Page<ProductDTO> result = service.searchProductsWithCategories(pageable);
+        //long endTime = System.nanoTime();
+        //long duration = (endTime - startTime) / 1_000_000;
+        //System.out.println("findAll duration: " + duration + " ms");
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping(value = "/findAllJPQL")
+    public ResponseEntity<Page<ProductDTO>> findAllWithCategoriesJPQL(Pageable pageable){
+        //long startTime = System.nanoTime();
+        Page<ProductDTO> result = service.searchProductsWithCategoriesJPQL(pageable);
+        //long endTime = System.nanoTime();
+        //long duration = (endTime - startTime) / 1_000_000;
+        //System.out.println("findAll duration: " + duration + " ms");
         return ResponseEntity.ok(result);
     }
 }
