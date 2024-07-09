@@ -1,11 +1,14 @@
 package com.vitor.dscatalog.services;
 
 import com.vitor.dscatalog.dto.ProductDTO;
+import com.vitor.dscatalog.entities.Category;
 import com.vitor.dscatalog.entities.Product;
+import com.vitor.dscatalog.repositories.CategoryRepository;
 import com.vitor.dscatalog.repositories.ProductRepository;
 import com.vitor.dscatalog.services.exceptions.DatabaseException;
 import com.vitor.dscatalog.services.exceptions.ResourceNotFoundException;
 import com.vitor.dscatalog.tests.Factory;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +44,9 @@ public class ProductServiceTests {
     @Mock
     private ProductRepository repository;
 
+    @Mock
+    private CategoryRepository categoryRepository;
+
     /*
     Usar @MockBean quando a classe de teste carrega o contexto da aplicação e precisa mockar algum bean do sistema.
     @WebMvcTest
@@ -54,6 +60,8 @@ public class ProductServiceTests {
     private long dependentId;
     private PageImpl<Product> page;
     private Product product;
+    private Category category;
+    private ProductDTO productDTO;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -64,19 +72,30 @@ public class ProductServiceTests {
         dependentId = 3L;
         product = Factory.createProduct();
         page = new PageImpl<>(List.of(product));
+        productDTO = Factory.createProductDTO();
+        category = Factory.createCategory();
 
         /*CONFIGURAÇÃO DO NOSSO MOCK DO REPOSITORY*/
+
         /*Não é necessário colocar Mockito.algumMetodo()
          * Da pra fazer import estático e usar doNothing() por ex direto, mas o nélio usa Mockito. para ensinar*/
 
+        /*-----------------------------------------------------
+        IMPORTANTE DEMAIS: COMO TEMOS DEPENDENCIA DO REPOSITORY, TEMOS QUE SIMULAR CADA CASO AO TESTAR UM MÉTODO, POR EXEMPLO, O
+        * findById TEM 2 CASOS, ONDE ELE RETORNA O PRODUCT E QUANDO RETORNA EXCEÇÃO
+        * LEMBRANDO QUE QUEM RETORNA OPTIONAL<PRODUCT> É O REPOSITORY, NÃO O SERVICE, POR ISSO TESTAMOS O SERVICE COM OQ ELE RETORNA, QUE É PRODUCTDTO E EXCEÇÃO RESOURCENOTFOUNDEXCEPTION
+        --------------------------------------------------------*/
+
         /*when é usado quando é um método que retorna alguma coisa
-         * Basicamente o método abaixo define o que deve acontecer quando for chamado existsById passando um id válido, no caso, retornar true*/
+         * Basicamente o método abaixo define o que deve acontecer quando for chamado existsById passando um id válido, no caso, retornar true
+         * Simulando o método existsById do delete*/
         Mockito.when(repository.existsById(existingId)).thenReturn(true);
         Mockito.when(repository.existsById(nonExistingId)).thenReturn(false);
         Mockito.when(repository.existsById(dependentId)).thenReturn(true);
 
         /*Basicamente: quando eu chamar o deleteById com um id existente, esse método não vai fazer nada, oq é o esperado
-         * QUANDO O MÉTODO RETORNA VOID, a gente coloca PRIMEIRO a ação e DEPOIS o WHEN, igual abaixo, donothing vem antes de when
+
+         * QUANDO O MÉTODO RETORNA VOID, a gente coloca PRIMEIRO a ação e DEPOIS o WHEN, igual abaixo, doNothing vem antes de when
          * AGORA, quando o método RETORNA alguma coisa, ai inverte, primeiro vem o WHEN, depois a ação*/
 
         Mockito.doNothing().when(repository).deleteById(existingId);
@@ -97,9 +116,23 @@ public class ProductServiceTests {
 
         /*Optional de produto
          * Estamos testando os 2 casos do findById, id existente e não existente*/
+        /*findById do findById*/
         Mockito.when(repository.findById(existingId)).thenReturn(Optional.of(product));
-
         Mockito.when((repository.findById(nonExistingId))).thenReturn(Optional.empty());
+
+        /*getReferenceById do insert e update do SERVICE
+
+         * O service retorna ProductDTO OU lança EntityNotFoundException
+         * não CONFUNDIR com os testes de repository, pois quem retorna Optional<Product> ou Optional Vazio é o REPOSITORY, então
+         * testes testando o Optional são feitos no REPOSITORY
+         * Aqui nos testes de SERVICE, testamos os retornos e exceções do SERVICE*/
+        Mockito.when((repository.getReferenceById(existingId))).thenReturn(product);
+        Mockito.when((repository.getReferenceById(nonExistingId))).thenThrow(EntityNotFoundException.class);
+        /*Por algum motivo, se o id da categoria for diferente de existingId da falha*/
+        Mockito.when((categoryRepository.getReferenceById(existingId))).thenReturn(category);
+        Mockito.when((categoryRepository.getReferenceById(nonExistingId))).thenThrow(EntityNotFoundException.class);
+        /* Precisaria desse abaixo se já não tivesse definido mais acima
+        Mockito.when(repository.save(ArgumentMatchers.any())).thenReturn(product);*/
     }
 
     @Test
@@ -143,4 +176,56 @@ public class ProductServiceTests {
         /*Verificando se o repositório foi chamado corretamente, 1x no caso*/
         Mockito.verify(repository, Mockito.times(1)).findAll(pageable);
     }
+
+    @Test
+    public void findByIdShouldReturnProductDTOWhenIdExists() {
+        ProductDTO result = service.findById(existingId);
+        Assertions.assertNotNull(result);
+        Mockito.verify(repository, Mockito.times(1)).findById(existingId);
+    }
+
+    @Test
+    public void findByIdShouldThrowResourceNotFoundExceptionWhenIdDoesNotExists() {
+
+        Assertions.assertThrows(ResourceNotFoundException.class, () -> {
+            service.findById(nonExistingId);
+        });
+        Mockito.verify(repository, Mockito.times(1)).findById(nonExistingId);
+    }
+
+    @Test
+    public void updateShouldReturnProductDTOWhenIdExists() {
+
+        ProductDTO result = service.update(existingId, productDTO);
+        Assertions.assertNotNull(result);
+
+        /*SEMPRE bom além dos Assertions, utilizar o verify para ver se as dependências,
+         no caso repository foram chamadas o número de vezes esperado*/
+
+        /*Aqui estamos verificando se o número de vezes em que os repositories foi chamado está correto*/
+        Mockito.verify(repository, Mockito.times(1)).getReferenceById(existingId);
+        /*Verificando se categoryRepository foi chamado o número de vezes do tamanho da lista de categorias*/
+        Mockito.verify(categoryRepository, Mockito.times(productDTO.getCategories().size())).getReferenceById(ArgumentMatchers.anyLong());
+        Mockito.verify(repository, Mockito.times(1)).save(product);
+    }
+
+    @Test
+    public void updateShouldThrowResourceNotFoundExceptionWhenProductIdDoesNotExists() {
+
+        Assertions.assertThrows(ResourceNotFoundException.class, () -> {
+            service.update(nonExistingId, productDTO);
+        });
+        Mockito.verify(repository,Mockito.times(1)).getReferenceById(nonExistingId);
+    }
+
+    /* Aqui poderia ser um teste que verifica se deu erro em algum id de categoria inexistente,
+    verificando com verify quantas vezes foi chamado também
+    @Test
+    public void updateShouldThrowResourceNotFoundExceptionWhenAnyCategoryIdDoesNotExists() {
+
+        Assertions.assertThrows(ResourceNotFoundException.class, () -> {
+            service.update(existingId, productDTO);
+        });
+        Mockito.verify(repository,Mockito.times(1)).getReferenceById(nonExistingId);
+    }*/
 }

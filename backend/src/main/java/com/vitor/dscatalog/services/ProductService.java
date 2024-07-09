@@ -124,11 +124,14 @@ public class ProductService {
             for (CategoryDTO cat : dto.getCategories()) {
                 Category category = categoryRepository.getReferenceById(cat.getId());
                 product.getCategories().add(category);
+               /*Também funcionaria, talvez até teria certeza de ter a categoria se por ex, fosse selecionada no front-end corretamente
+               em algum campo que só mostra categorias existentes
+                product.getCategories().add(new Category(cat.getId(), null));*/
             }
             product = repository.save(product);
             return new ProductDTO(product);
         } catch (EntityNotFoundException e) {
-            throw new DatabaseException("Resource not found");
+            throw new ResourceNotFoundException("Resource not found");
         }
     }
 
@@ -142,5 +145,11 @@ public class ProductService {
         } catch (DataIntegrityViolationException e) {
             throw new DatabaseException("Referencial Integrity failure");
         }
+    }
+
+    @Transactional(readOnly = true)
+    public ProductDTO findById(Long id) {
+        Product product = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Resource not found"));
+        return new ProductDTO(product);
     }
 }
