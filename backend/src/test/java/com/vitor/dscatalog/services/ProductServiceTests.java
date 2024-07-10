@@ -127,6 +127,8 @@ public class ProductServiceTests {
          * testes testando o Optional são feitos no REPOSITORY
          * Aqui nos testes de SERVICE, testamos os retornos e exceções do SERVICE*/
         Mockito.when((repository.getReferenceById(existingId))).thenReturn(product);
+        /*Simulando o EntityNotFoundException que é do REPOSITORY, o nosso ResourceNotFound é do SERVICE que estamos testando,
+        * por isso simulamos a exceção do repository*/
         Mockito.when((repository.getReferenceById(nonExistingId))).thenThrow(EntityNotFoundException.class);
         /*Por algum motivo, se o id da categoria for diferente de existingId da falha*/
         Mockito.when((categoryRepository.getReferenceById(existingId))).thenReturn(category);
